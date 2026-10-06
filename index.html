@@ -3,6 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1f3a52">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Office Mgr">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>KOZHIKODE SS – POWERGRID</title>
 <style>
   :root{
@@ -17,6 +24,9 @@
   button{cursor:pointer}
   :focus-visible{outline:3px solid var(--amber);outline-offset:2px}
   .hidden{display:none !important}
+  #installBtn{position:fixed;right:14px;bottom:14px;z-index:9999;padding:11px 16px;border:0;border-radius:24px;
+    background:var(--amber);color:#16212b;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+
 
   /* ---------- Login ---------- */
   #loginView{min-height:100vh;display:grid;place-items:center;padding:20px;
@@ -403,6 +413,24 @@
 </section>
 
 <div id="modalRoot"></div>
+<button id="installBtn" class="hidden" type="button">&#11015; Install app</button>
+<script>
+/* ---- PWA: service worker + install button ---- */
+(function(){
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
+  var deferred = null, btn = document.getElementById("installBtn");
+  window.addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); deferred = e; btn.classList.remove("hidden"); });
+  btn.addEventListener("click", function(){
+    if (!deferred) return;
+    deferred.prompt();
+    deferred.userChoice.then(function(){ deferred = null; btn.classList.add("hidden"); });
+  });
+  window.addEventListener("appinstalled", function(){ btn.classList.add("hidden"); });
+})();
+</script>
+
 
 <script>
 (function(){
