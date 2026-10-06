@@ -374,6 +374,7 @@
       </div>
       <p class="error" id="loginErr" role="alert"></p>
       <button class="btn wide" id="loginBtn" type="button">Sign in</button>
+      <p id="verLine" style="text-align:center;font-size:.75rem;color:var(--muted);margin:10px 0 0">Page v14</p>
       <button class="linkbtn" id="forgotBtn" type="button">Forgot / change password?</button>
       <p class="mode-note" id="modeNote"></p>
     </div>
@@ -413,6 +414,7 @@
      Master and user passwords are checked on the Google server (Code.gs),
      so no password is stored in this file.
      ===================================================================== */
+  var PAGE_VER = "v14";
   var API_URL = "https://script.google.com/macros/s/AKfycbyV3-iaQXXsFh70EicRzuSPKsYT572gYXZsngRyUaB01W24Q8j2LpijWHu19YXwl6JvAw/exec";
   var POLL_MS = 8000;                                   // live refresh interval
 
@@ -781,7 +783,7 @@
     if(SYNC){
       if(!isSupport()) ampFetch();
       clearInterval(pollTimer);
-      pollTimer = setInterval(function(){ if(!document.hidden){ pull(); if(!isSupport() && (activeTab === "maint" || activeTab === "follow" || activeTab === "proc" || activeTab === "home")) ampFetch(); } }, POLL_MS);
+      pollTimer = setInterval(function(){ if(document.hidden){ if(Date.now() - (window.__lastPing||0) > 60000){ window.__lastPing = Date.now(); api({ action: "ping" }).catch(function(){}); } return; } if(!document.hidden){ pull(); if(!isSupport() && (activeTab === "maint" || activeTab === "follow" || activeTab === "proc" || activeTab === "home")) ampFetch(); } }, POLL_MS);
     }
   }
 
@@ -801,6 +803,9 @@
       try{ sessionStorage.setItem("kss_auth", JSON.stringify(auth)); }catch(e){}
       applyData(r.json.data); lastText = r.text;
       enterApp(r.json.role || auth.role, auth.id, r.json.user);
+      if(r.json.ver && r.json.ver !== PAGE_VER && auth.role === "master"){
+        setTimeout(function(){ try{ alert("VERSION MISMATCH\n\nThis page is " + PAGE_VER + " but the Google Apps Script is " + r.json.ver + ".\n\nIf the server is older: paste the latest Code.gs and Deploy > Manage deployments > New version.\nIf the page is older: hard-refresh (Ctrl+F5) or re-upload the HTML to GitHub."); }catch(e){} }, 400);
+      }
       if(!r.json.ver && auth.role === "master"){
         setTimeout(function(){ try{ alert("OLD BACKEND DETECTED.\n\nThis page is connected to an old version of the Google Apps Script, so new employees will save with a blank name.\n\nFix: in Apps Script paste the v4 Code.gs, then Deploy > Manage deployments > pencil icon > Version: New version > Deploy. Do NOT use 'New deployment' (that changes the URL)."); }catch(e){} }, 300);
       }
@@ -1383,9 +1388,10 @@
     var el = $("onlinePill"); if(!el) return;
     if(!SYNC || !session){ el.textContent = ""; return; }
     var n = (state.online && state.online.count) || 0;
-    el.className = "sync ok"; el.textContent = "● " + n + " online";
+    var oe = state.online && state.online.err;
+    el.className = oe ? "sync error" : "sync ok"; el.textContent = oe ? "● online: unavailable" : "● " + n + " online";
     el.style.cursor = isMaster() ? "pointer" : "default";
-    el.title = isMaster() ? "Click to see who is logged in" : "People logged in right now";
+    el.title = oe ? ("Online list problem: " + oe) : (isMaster() ? "Click to see who is logged in" : "People logged in right now");
     el.onclick = isMaster() ? onlineModal : null;
   }
   function onlineModal(){
@@ -1393,7 +1399,7 @@
     var rl = { master: "Master", user: "User", support: "Support Staff" };
     openModal('<h3>Online now ('+list.length+')</h3><ul class="ulist">'+
       (list.map(function(u){ return '<li><div style="flex:1 1 100%"><b>'+esc(u.name)+'</b> <small>('+esc(u.id)+')</small> <span class="badge">'+esc(rl[u.role]||u.role)+'</span></div></li>'; }).join("") || '<li><small>Nobody else is online.</small></li>')+
-      '</ul><p style="color:var(--muted);font-size:.85rem">A login shows as online while its page is open and active (updated every few seconds, drops off after about 2 minutes).</p>'+
+      '</ul><p style="color:var(--muted);font-size:.85rem">A login shows as online while its page is open (checked every few seconds, even in a background tab). It drops off about 3 minutes after the page is closed or the device goes offline.</p>'+
       '<div class="row"><button class="btn" id="mNo" type="button">Close</button></div>');
     $("mNo").onclick = closeModal;
   }
