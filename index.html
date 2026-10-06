@@ -385,6 +385,7 @@
   <header class="top">
     <div class="top-in">
       <img class="top-logo" id="topLogo" alt="POWERGRID logo"><span class="top-title">KOZHIKODE SS</span>
+      <span class="sync" id="onlinePill" role="button" tabindex="0" style="cursor:default"></span>
       <span class="sync" id="syncPill" role="button" tabindex="0" title="Click to refresh now"></span>
       <span class="who" id="whoLabel"></span>
       <span class="sess" id="sessLabel" title="Time left in this login session. It resets whenever you use the app; 30 minutes of inactivity logs you out."></span>
@@ -419,7 +420,7 @@
 
   /* ---------- State ---------- */
   var KEY = "kozhikode_ss_daily_work_v1";
-  var state = { employees: [], users: [], events: [], assignments: [], amp: [], notice: "", contracts: [], amcUsers: [], amcWorks: [], sched: [], amcDaily: [], fu: [], pr: [], avail: [] };
+  var state = { employees: [], users: [], events: [], assignments: [], amp: [], notice: "", contracts: [], amcUsers: [], amcWorks: [], sched: [], amcDaily: [], fu: [], pr: [], avail: [], online: { count: 0, list: [] } };
   var assignFilter = "all", assignTo = "", lastBy = "";
   var empView = "work";         // inside an employee tab: "work" or "cal"
   var dashPeriod = "today";     // dashboard range
@@ -588,6 +589,7 @@
     state.amcAssignees = d.amcAssignees || [];
     state.minWage = d.minWage || [];
     state.avail = d.avail || [];
+    state.online = d.online || { count: 0, list: [] };
     var nev = null;
     state.events = state.events.filter(function(x){ if(x.id === NOTICE_ID){ nev = x; return false; } return true; });
     state.notice = nev ? (nev.note || "") : "";
@@ -863,6 +865,7 @@
   $("forgotBtn").onclick = forgotModal;
 
   function doLogout(msg){
+    if(SYNC && auth){ try{ fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "logout", auth: auth }) }).catch(function(){}); }catch(e){} }
     clearInterval(pollTimer); clearInterval(sessTick); sessExp = 0;
     var sl = $("sessLabel"); if(sl){ sl.textContent = ""; sl.classList.remove("warn"); }
     session = null; auth = null; queue = []; flushing = false; pendingRefresh = null;
@@ -1376,7 +1379,25 @@
   }
 
   /* ---------- Render ---------- */
-  function render(){ renderNotice(); renderTabs(); renderPanel(); }
+  function paintOnline(){
+    var el = $("onlinePill"); if(!el) return;
+    if(!SYNC || !session){ el.textContent = ""; return; }
+    var n = (state.online && state.online.count) || 0;
+    el.className = "sync ok"; el.textContent = "● " + n + " online";
+    el.style.cursor = isMaster() ? "pointer" : "default";
+    el.title = isMaster() ? "Click to see who is logged in" : "People logged in right now";
+    el.onclick = isMaster() ? onlineModal : null;
+  }
+  function onlineModal(){
+    var list = (state.online && state.online.list) || [];
+    var rl = { master: "Master", user: "User", support: "Support Staff" };
+    openModal('<h3>Online now ('+list.length+')</h3><ul class="ulist">'+
+      (list.map(function(u){ return '<li><div style="flex:1 1 100%"><b>'+esc(u.name)+'</b> <small>('+esc(u.id)+')</small> <span class="badge">'+esc(rl[u.role]||u.role)+'</span></div></li>'; }).join("") || '<li><small>Nobody else is online.</small></li>')+
+      '</ul><p style="color:var(--muted);font-size:.85rem">A login shows as online while its page is open and active (updated every few seconds, drops off after about 2 minutes).</p>'+
+      '<div class="row"><button class="btn" id="mNo" type="button">Close</button></div>');
+    $("mNo").onclick = closeModal;
+  }
+  function render(){ renderNotice(); renderTabs(); renderPanel(); paintOnline(); }
 
   function renderTabs(){
     var html = '<button type="button" class="tab active" data-tab="home">Home</button>';
