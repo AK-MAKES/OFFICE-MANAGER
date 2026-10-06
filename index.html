@@ -533,7 +533,7 @@
   function defaults(){
     var emps = [];
     for(var i=1;i<=11;i++) emps.push({ id: uid()+i, name: "Employee "+i, works: [] });
-    return { employees: emps, users: [ { id: "User", pass: "Power@400" } ], events: [], assignments: [], amp: [], notice: "", contracts: [], amcUsers: [], amcWorks: [], sched: [], fu: [], pr: [] };
+    return { employees: emps, users: [], events: [], assignments: [], amp: [], notice: "", contracts: [], amcUsers: [], amcWorks: [], sched: [], fu: [], pr: [] };
   }
   function loadLocal(){
     try{ var raw = localStorage.getItem(KEY); if(raw){ var st = JSON.parse(raw); st.events = st.events || []; st.assignments = st.assignments || []; st.amp = st.amp || []; st.notice = st.notice || ""; st.contracts = st.contracts || []; st.amcUsers = st.amcUsers || []; st.amcWorks = st.amcWorks || []; st.sched = st.sched || []; st.fu = st.fu || []; st.pr = st.pr || []; return st; } }catch(e){}
@@ -787,7 +787,7 @@
     var id = $("loginId").value.trim(), pw = $("loginPass").value;
     if(!SYNC){
       var ok = false;
-      if(loginRole === "master") ok = id === "Master" && pw === "Master@400";
+      if(loginRole === "master") ok = false;   // no master password is stored in this page; Master login is checked only on the server
       else ok = state.users.some(function(u){ return u.id === id && u.pass === pw && (u.role||"user") === loginRole; });
       if(!ok){ $("loginErr").textContent = "Wrong ID or password. Check and try again."; return; }
       enterApp(loginRole, id); return;
